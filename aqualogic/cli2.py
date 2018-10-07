@@ -4,9 +4,12 @@ import threading
 import logging
 import sys
 from core import AquaLogic, States
+import serial
 
 logging.basicConfig(level=logging.INFO)
-PORT = 23
+#PORT = 23
+SERIAL_PORT = '/dev/ttyUSB0'
+SERIAL_BAUD = 19200
 
 
 def _data_changed(panel):
@@ -18,11 +21,15 @@ def _data_changed(panel):
     if panel.get_state(States.CHECK_SYSTEM):
         print('Check System: {}'.format(panel.check_system_msg))
 
-
-PANEL = AquaLogic()
 print('Connecting to {}:{}...'.format(sys.argv[1], PORT))
-PANEL.connect(sys.argv[1], PORT)
+ser = serial.Serial(SERIAL_PORT, SERIAL_BAUD)
 print('Connected!')
+
+
+PANEL = AquaLogic(ser,ser)
+#print('Connecting to {}:{}...'.format(sys.argv[1], PORT))
+#PANEL.connect(sys.argv[1], PORT)
+#print('Connected!')
 
 READER_THREAD = threading.Thread(target=PANEL.process, args=[_data_changed])
 READER_THREAD.start()
@@ -34,3 +41,5 @@ while True:
         PANEL.set_state(STATE, not PANEL.get_state(STATE))
     except KeyError:
         print('Invalid key {}'.format(LINE))
+
+ser.close()
