@@ -21,7 +21,7 @@ def _data_changed(panel):
     if panel.get_state(States.CHECK_SYSTEM):
         print('Check System: {}'.format(panel.check_system_msg))
 
-print('Connecting to {}:{}...'.format(sys.argv[1], PORT))
+print('Connecting to {}...'.format(SERIAL_PORT))
 ser = serial.Serial(SERIAL_PORT, SERIAL_BAUD)
 print('Connected!')
 
