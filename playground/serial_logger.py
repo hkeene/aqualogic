@@ -12,7 +12,7 @@ ser = serial.Serial(
 
 print("Connected to: " + ser.portstr)
 
-seq = []
+seq = bytearray()
 
 for x in range (100):
     seq.append(ser.read(1))
