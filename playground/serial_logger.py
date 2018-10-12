@@ -1,5 +1,4 @@
-import serial, time, io, datetime
-from serial import Serial
+import serial
 
 #ser = serial.Serial(
 #    port = '/dev/ttyUSB0',\
@@ -8,7 +7,14 @@ from serial import Serial
 #    stopbits=serial.STOPBITS_TWO,\
 #    bytesize=serial.EIGHTBITS)
 
-ser = serial.Serial('/dev/ttyUSB0')
+#ser = serial.Serial('/dev/ttyUSB0')
+
+ser = serial.Serial(
+    port = '/dev/ttyUSB0',\
+    baudrate = 19200)
+#    parity=serial.PARITY_NONE,\
+#    stopbits=serial.STOPBITS_TWO,\
+#    bytesize=serial.EIGHTBITS)
 
 print("Connected to: " + ser.portstr)
 

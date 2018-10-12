@@ -7,7 +7,7 @@ FRAME_END   = FRAME_DLE + FRAME_ETX
 
 frame = bytearray()
 
-with open("idle.bin", "rb") as f:
+with open("log.bin", "rb") as f:
 
     while True: #Will break out of this once the file ends
         #First prime the bytearray with two reads
