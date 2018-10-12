@@ -14,7 +14,7 @@ print("Connected to: " + ser.portstr)
 
 f = open("log.bin", "wb")
 
-for x in range(100):
+for x in range(4000):
     y = ser.read(1)
     print(y)
     f.write(y)
