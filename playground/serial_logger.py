@@ -12,14 +12,11 @@ ser = serial.Serial(
 
 print("Connected to: " + ser.portstr)
 
-seq = bytearray()
+f = open("log.bin", "wb")
 
 for x in range (100):
-    seq += ser.read(1)
+    y = ser.read(1)
+    f.write(y)
 
 ser.close()
-
-f = open("log.bin", "w")
-f.write(str(seq))
-
 f.close()
