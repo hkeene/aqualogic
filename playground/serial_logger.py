@@ -12,12 +12,12 @@ ser = serial.Serial('/dev/ttyUSB0')
 
 print("Connected to: " + ser.portstr)
 
-#f = open("log.bin", "wb")
+f = open("log.bin", "wb")
 
 for x in range(100):
     y = ser.read(1)
     print(y)
-    #f.write(y)
+    f.write(y)
 
 ser.close()
-#f.close()
+f.close()
