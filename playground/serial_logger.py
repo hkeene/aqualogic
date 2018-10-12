@@ -12,11 +12,12 @@ ser = serial.Serial(
 
 print("Connected to: " + ser.portstr)
 
-f = open("log.bin", "wb")
+#f = open("log.bin", "wb")
 
-for x in range (100):
+for x in range(100):
     y = ser.read(1)
-    f.write(y)
+    print(y)
+    #f.write(y)
 
 ser.close()
-f.close()
+#f.close()
