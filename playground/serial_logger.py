@@ -19,7 +19,7 @@ for x in range (100):
 
 ser.close()
 
-with open("idle.bin", "rb") as f:
-    f.write(seq)
+f = open("log.bin", "x")
+f.write(seq)
 
 f.close()
