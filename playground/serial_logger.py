@@ -22,7 +22,7 @@ f = open("log.bin", "wb")
 
 for x in range(4000):
     y = ser.read(1)
-    print(y)
+    #print(y)
     f.write(y)
 
 ser.close()
