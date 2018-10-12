@@ -15,11 +15,11 @@ print("Connected to: " + ser.portstr)
 seq = bytearray()
 
 for x in range (100):
-    seq.append(ser.read(1))
+    seq += ser.read(1)
 
 ser.close()
 
-f = open("log.bin", "x")
-f.write(seq)
+f = open("log.bin", "w")
+f.write(str(seq))
 
 f.close()
