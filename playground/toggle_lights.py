@@ -85,6 +85,8 @@ if __name__ == '__main__':
         if (frame == FRAME_TYPE_KEEP_ALIVE) and do_once :
             #print("sending light command")
             ser.write(FRAME_LIGHTS)
+            print("sending light command")
+            print(FRAME_LIGHTS)
             do_once = False
         f.write(frame)
         frame.clear()
