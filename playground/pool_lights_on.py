@@ -62,7 +62,7 @@ if __name__ == '__main__':
     q = []
     q.append(LIGHTS_PUSH)
     q.append(LIGHTS_UP)
-
+    q.append(LIGHTS_UP)
 
     do_once = True
     killer = GracefulKiller()
