@@ -14,7 +14,9 @@ LIGHTS = b'\x00\x01'
 #FRAME_LIGHTS = b'\x10\x02\x01\x02\x68\x00\xfe\x01\x00\x00\x00\x00\x01\x7c\x10\x03'
 FRAME_TYPE_KEEP_ALIVE = b'\x10\x02\x01\x01\x00\x14\x10\x03'
 
-FRAME_LIGHTS = b'\x10\x02\x00\x02\x00\x01\x00\x00\x00\x01\x00\x00\x00\x16\x10\x03'
+LIGHTS_PUSH = b'\x10\x02\x00\x02\x00\x01\x00\x00\x00\x01\x00\x00\x00\x16\x10\x03'
+LIGHTS_UP   = b'\x10\x02\x00\x02\x00\x01\x00\x00\x00\x00\x00\x00\x00\x15\x10\x03
+
 
 class GracefulKiller:
     kill_now = False
@@ -34,26 +36,32 @@ def _append_data(self, frame, data):
 frame = bytearray()
 
 if __name__ == '__main__':
-    # Create frame to send
-    lights = bytearray()
-    lights += FRAME_DLE
-    lights += FRAME_STX
+    # # Create frame to send
+    # lights = bytearray()
+    # lights += FRAME_DLE
+    # lights += FRAME_STX
+    #
+    # lights += FRAME_TYPE_KEY_EVENT
+    #
+    # lights += LIGHTS
+    # lights += LIGHTS
+    #
+    # crc = 0
+    # for byte in lights:
+    #     crc += byte
+    #
+    # lights += crc.to_bytes(2, byteorder='big')
+    #
+    # lights += FRAME_DLE
+    # lights += FRAME_ETX
+    #
+    # print(lights)
 
-    lights += FRAME_TYPE_KEY_EVENT
-
-    lights += LIGHTS
-    lights += LIGHTS
-
-    crc = 0
-    for byte in lights:
-        crc += byte
-
-    lights += crc.to_bytes(2, byteorder='big')
-
-    lights += FRAME_DLE
-    lights += FRAME_ETX
-
-    print(lights)
+    # Create list to emulate queue
+    # Need to send the key down and then at least one key hold ??
+    q = []
+    q.append(LIGHTS_PUSH)
+    q.append(LIGHTS_UP)
 
 
     do_once = True
@@ -82,12 +90,12 @@ if __name__ == '__main__':
             frame += ser.read(1)
 
         #Push frame to queue for processing
-        if (frame == FRAME_TYPE_KEEP_ALIVE) and do_once :
+        if (frame == FRAME_TYPE_KEEP_ALIVE) and q:
             #print("sending light command")
-            ser.write(FRAME_LIGHTS)
-            print("sending light command")
-            print(FRAME_LIGHTS)
-            do_once = False
+            ser.write(q.pop(0))
+#            print("sending light command")
+#            print(FRAME_LIGHTS)
+#            do_once = False
         f.write(frame)
         frame.clear()
 
