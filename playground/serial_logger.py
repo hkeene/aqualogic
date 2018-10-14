@@ -37,7 +37,7 @@ if __name__ == '__main__':
         frame += ser.read(2)
         #Iterate over frame until it is the start
         while frame != FRAME_START:
-           # print("missed start frame")
+            print(frame)
             frame.pop(0)
             frame += ser.read(1)
 
