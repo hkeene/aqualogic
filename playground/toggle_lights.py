@@ -8,6 +8,10 @@ FRAME_ETX = b'\x03'
 FRAME_START = FRAME_DLE + FRAME_STX
 FRAME_END   = FRAME_DLE + FRAME_ETX
 
+FRAME_LIGHTS = b'\x10\x02\x01\x02\x68\x00\xfe\x01\x00\x00\x00\x00\x01\x7c\x10\x03'
+FRAME_TYPE_KEEP_ALIVE = b'\x10\x02\x01\x01\x00\x14\x10\x03'
+
+
 class GracefulKiller:
     kill_now = False
     def __init__(self):
@@ -45,6 +49,8 @@ if __name__ == '__main__':
             frame += ser.read(1)
 
         #Push frame to queue for processing
+        if frame == FRAME_TYPE_KEEP_ALIVE:
+            print("Keep alive")
         f.write(frame)
         frame.clear()
 

@@ -14,7 +14,8 @@ with open("log.bin", "rb") as f:
         frame += f.read(2)
         #Iterate over frame until it is the start
         while frame != FRAME_START:
-            print("missed start frame")
+            print("error")
+            print(frame)
             frame.pop(0)
             frame += f.read(1)
 
