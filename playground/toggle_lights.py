@@ -83,8 +83,8 @@ if __name__ == '__main__':
 
         #Push frame to queue for processing
         if (frame == FRAME_TYPE_KEEP_ALIVE) and do_once :
-            print("sending light command")
-            ser.write(lights)
+            #print("sending light command")
+            ser.write(FRAME_LIGHTS)
             do_once = False
         f.write(frame)
         frame.clear()
