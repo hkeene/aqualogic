@@ -24,6 +24,7 @@ class GracefulKiller:
 frame = bytearray()
 
 if __name__ == '__main__':
+    do_once = True
     killer = GracefulKiller()
     ser = serial.Serial(
         port = '/dev/ttyUSB0',\
@@ -49,8 +50,10 @@ if __name__ == '__main__':
             frame += ser.read(1)
 
         #Push frame to queue for processing
-        if frame == FRAME_TYPE_KEEP_ALIVE:
-            print("Keep alive")
+        if (frame == FRAME_TYPE_KEEP_ALIVE) and do_once :
+            print("sending light command")
+            ser.write(FRAME_LIGHTS)
+            do_once = False
         f.write(frame)
         frame.clear()
 
