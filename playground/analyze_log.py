@@ -11,7 +11,7 @@ frame = bytearray()
 
 remove_ca = True
 
-with open("toggle_pool_lights.bin", "rb") as f:
+with open("toggle_waterfall.bin", "rb") as f:
 
     while True: #Will break out of this once the file ends
         #First prime the bytearray with two reads
