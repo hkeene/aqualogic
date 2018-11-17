@@ -26,7 +26,7 @@ if __name__ == '__main__':
     prev = ser.read(1)
     for x in range(BYTES_TO_READ):
         curr = ser.read(1)
-        if (prev == FRAME_DLE) && (curr == FRAME_STX):
+        if (prev == FRAME_DLE) & (curr == FRAME_STX):
             #Start of new frame marker
             x.append(frame) #append previous frame to list to save
             x.append(datetime.datetime.now().time())  #append time stamp of new frame
