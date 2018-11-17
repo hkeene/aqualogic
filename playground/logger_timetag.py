@@ -29,7 +29,7 @@ if __name__ == '__main__':
         if (prev == FRAME_DLE) & (curr == FRAME_STX):
             #Start of new frame marker
             data.append(frame) #append previous frame to list to save
-            data.append(datetime.datetime.now().time())  #append time stamp of new frame
+            data.append(datetime.datetime.now())  #append time stamp of new frame
             frame = bytearray()
             frame += prev
             frame += curr
