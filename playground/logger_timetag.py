@@ -31,7 +31,7 @@ if __name__ == '__main__':
             print("found first of frame")
             data.append(frame) #append previous frame to list to save
             data.append(datetime.datetime.now().time())  #append time stamp of new frame
-            frame.clear()
+            frame = bytearray()
             frame += prev
             frame += curr
             prev = curr
