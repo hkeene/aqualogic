@@ -12,7 +12,7 @@ FRAME_END   = FRAME_DLE + FRAME_ETX
 frame = bytearray()
 data = list()
 
-BYTES_TO_READ = 100
+BYTES_TO_READ = 4000
 log_name = "log.bin"
 
 if __name__ == '__main__':
@@ -28,7 +28,6 @@ if __name__ == '__main__':
         curr = ser.read(1)
         if (prev == FRAME_DLE) & (curr == FRAME_STX):
             #Start of new frame marker
-            print("found first of frame")
             data.append(frame) #append previous frame to list to save
             data.append(datetime.datetime.now().time())  #append time stamp of new frame
             frame = bytearray()
@@ -36,7 +35,6 @@ if __name__ == '__main__':
             frame += curr
             prev = curr
         else:
-            print("adding to frame")
             frame += curr
             prev = curr
 
