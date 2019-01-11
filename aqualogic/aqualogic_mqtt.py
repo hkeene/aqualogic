@@ -25,9 +25,44 @@ This program starts the following multiprocessing threads:
 
 Required arguments:
 -m --mqtt       The address to the mqtt server to use for the interface
--s --serial     The device to use as the serial interface to the Aqualogic controller
+-s --serial     The device address to use as the serial interface to the Aqualogic controller
 -l --log_file   Path for the desired log file
 
 """
 import argparse
-from core import PoolState, PoolCntl, ThreadedLogger
+from core import PoolState, PoolCntl, ThreadedLogger, GracefulKiller
+from multiprocessing import Process, Queue
+import time
+
+
+def main():
+    print("Hello from main")
+    ser = '/dev/ttyUSB0'
+
+    to_pool = Queue()
+    from_pool = Queue()
+    logger = Queue()
+
+    pool_cntl = PoolCntl(ser, to_pool, from_pool, logger)
+    killer = GracefulKiller()
+
+    p = Process(target=pool_cntl.process)
+    p.start
+    p.join
+    print("Type Cntl-C to close program")
+    while True:
+        if not logger.empty():
+            print(logger.get())
+        time.sleep(0.1)
+        if killer.kill_now:
+          break
+
+    print ("End of the program. I was killed gracefully")
+
+if __name__ == '__main__':
+    main()
+    # q = Queue()
+    # p = Process(target=f, args=(q,))
+    # p.start()
+    # print(q.get())    # prints "[42, None, 'hello']"
+    # p.join()
