@@ -12,8 +12,8 @@ FRAME_END   = FRAME_DLE + FRAME_ETX
 frame = bytearray()
 data = list()
 
-BYTES_TO_READ = 4000
-log_name = "log.bin"
+BYTES_TO_READ = 2000
+log_name = "/home/hkeene/pool/aqualogic/playground/logs/log_waterfalls_off.bin"
 
 if __name__ == '__main__':
 
