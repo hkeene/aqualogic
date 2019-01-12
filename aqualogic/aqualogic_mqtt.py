@@ -35,6 +35,7 @@ import multiprocessing as mp
 import signal
 import serial
 import time #this is for testing
+import pickle
 
 
 FRAME_DLE = b'\x10'
@@ -61,59 +62,38 @@ def process_serial(serial_addr, to_pool, from_pool, logger_q, stop_event):
 
     logger_q.put("Connected to: " + ser.portstr)
 
-    frame = bytearray()
-    # frame_cnt = 0
-    #Prime the prev for the first time loop
+    #Prime the prev and curr for the first time loop
     prev = ser.read(1)
-    while not stop_event.is_set():
-        curr = ser.read(1)
+    curr = ser.read(1)
+    while not stop_event.is_set(): #This main loop finds the start of a frame
         if (prev == FRAME_DLE) & (curr == FRAME_STX):
             #Start of new frame marker
-            from_pool.put(frame) #append previous frame to list to save
-            frame = bytearray()
-            frame += prev
-            frame += curr
-            prev = curr
+            frame = bytearray() # reset frame
+            frame += prev 
+            end_frame = False
+            while (not end_frame) & (not stop_event.is_set()): #This loop finds the end of the frame
+                if (prev == FRAME_DLE) & (curr == FRAME_ETX): #If this is the end of frame then break the loop
+                    end_frame = True
+                    frame += curr
+                    prev = curr
+                    curr = ser.read(1)
+                else: #Continue looking for end of frame
+                    frame += curr
+                    prev = curr
+                    curr = ser.read(1)
+            if frame == FRAME_TYPE_KEEP_ALIVE:
+                pass #If transmit queue has something in it then transmit it
+            else:
+                #The frame is not a keep alive so we should send this to the from_pool queue
+                from_pool.put(frame)
         else:
-            frame += curr
+            #Keep searching for start of new frame marker
             prev = curr
-
-
-
-
-
-
-
-#         #First prime the bytearray with two reads
-#         frame += ser.read(2)
-#         #Iterate over frame until it is the start
-#         while frame != FRAME_START:
-#             frame.pop(0)
-#             frame += ser.read(1)
-#         while not frame.endswith(FRAME_END):
-#             frame += ser.read(1)
-
-#         if (frame == FRAME_TYPE_KEEP_ALIVE):
-#             pass
-# #             x = q.pop(0)
-# #             ser.write(x)
-
-#         else:
-#             from_pool.put(frame)
-
-#         frame.clear()
-        
-#         # frame_cnt += 1
-#         # if frame_cnt > 100:
-#         #     logger_q.put("Serial Heartbeat")
-
-
-        if killer.kill_now:
-          break
+            curr = ser.read(1)
 
     logger_q.put('Stopping serial process')
-
     ser.close()
+    logger_q.put('Serial port closed')
 
 class GracefulKiller:
     kill_now = False
@@ -125,6 +105,11 @@ class GracefulKiller:
         self.kill_now = True
 
 if __name__ == '__main__':
+    #Debugging code below. Could turn it into a logging option
+    log_name = "/home/hkeene/pool/aqualogic/playground/logs/messages_from_pool.bin"
+    log_chk = True #set to true to log received data
+    data = list()
+
     serial_addr = '/dev/ttyUSB0'
     
     killer = GracefulKiller()
@@ -139,11 +124,17 @@ if __name__ == '__main__':
         if not logger_q.empty():
             print(logger_q.get())
         if not from_pool.empty():
-            print(from_pool.get())
+            frame = from_pool.get()
+            print(frame)
+            if log_chk:
+                data.append(frame)
         if killer.kill_now:
           break
     stop_event.set()
     print("Ending program")
     p.join()
+    if log_chk:
+        with open (log_name, "wb") as fp:
+            pickle.dump(data, fp)
     while not logger_q.empty():
         print(logger_q.get())
