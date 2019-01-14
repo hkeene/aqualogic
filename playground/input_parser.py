@@ -9,6 +9,8 @@ FRAME_START = FRAME_DLE + FRAME_STX
 FRAME_END   = FRAME_DLE + FRAME_ETX
 
 FRAME_TYPE_DISPLAY_UPDATE = b'\x01\x03'
+FRAME_TYPE_LEDS = b'\x01\x02'
+
 
 def hdr_ftr_correct(frame):
     if (frame[0:2] == FRAME_START) & (frame[-2:] == FRAME_END):
@@ -16,21 +18,21 @@ def hdr_ftr_correct(frame):
     else:
         return False
 
-def crc_correct(frame):
+def crc_correct(frame_content, frame_crc):
+    return True #Not sure why this isn't working yet...
+
     # # Verify CRC
-    # frame_crc = int.from_bytes(frame[-2:], byteorder='big')
-    # frame = frame[:-2]
+    # frame_crc_int = int.from_bytes(frame_crc, byteorder='big')
 
-    # calculated_crc = self.FRAME_DLE + self.FRAME_STX
+    # calculated_crc = int.from_bytes(FRAME_DLE, byteorder='big') + int.from_bytes(FRAME_STX, byteorder='big')
     # for byte in frame:
-    #     calculated_crc += byte
+    #     calculated_crc = calculated_crc + byte
 
-    # if frame_crc != calculated_crc:
-    #     _LOGGER.warning('Bad CRC')
-    #     continue
-
-    return True
-
+    # if frame_crc_int != calculated_crc:
+    #     return False
+    # else:
+    #     return True
+    
 def logger(text):
     print(text)
 
@@ -42,27 +44,36 @@ if __name__ == '__main__':
         items = pickle.load(fp)
     
     for frame in items:
-        # Check for correct headers and footers
-        if hdr_ftr_correct(frame):
-            logger("Good header & footer")
-        else:
-            logger("Bad header & footer")
-            continue
-
-        # Check for correct CRC
-        if crc_correct(frame):
-            logger("Good CRC")
-        else:
-            logger("Bad CRC")
-            continue
-
+        #Split frame into parts
         frame_type = frame[2:4]
         frame_content = frame[4:-5]
+        frame_crc = frame[-5:-2]
+
+        # Check for correct headers and footers
+        if not hdr_ftr_correct(frame):
+            logger("Bad header & footer")
+            logger(frame)
+            continue
         
+        # Check for correct CRC
+        if not crc_correct(frame_content, frame_crc):
+            logger("Bad CRC")
+            logger(frame)
+            continue
+    
         if frame_type == FRAME_TYPE_DISPLAY_UPDATE:
             logger("Display update frame")
             parts = frame_content.decode('latin-1').split()
             logger(parts)
+        elif frame_type == FRAME_TYPE_LEDS:
+            logger("LED update")
+            logger(frame_content)
+        else:
+            logger("Unknown frame type")
+            logger(frame_type)
+            logger(frame_content)
+
+
 
     # if frame_type == self.FRAME_TYPE_KEEP_ALIVE:
     #     # Keep alive

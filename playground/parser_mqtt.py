@@ -1,67 +1,14 @@
-"""
-This is the main program for the Aqualogic inteface. It is meant to run as a
-systemd daemon. It can also be used stand-alone from the command line.
-An example systemd.service file is included and can be used to start and stop
-the service.
-
-This program starts the following multiprocessing threads:
-- PoolCntl      This thread connects the RS485 interface to the AquaLogic controller
-                It monitors the serial stream for data packets and puts those packets
-                on the from_pool queue for decoding in the PoolState thread
-                It also monitors the to_pool queue and sends those commands to the
-                serial interface after a detected keep-alive packet.
-                This thread does not monitor the state of the pool controller, or
-                handle resending data if it was not received.
-- PoolState     This thread connects to the mqtt interface to Home Assistant (or other
-                mqtt based home controller). It monitors the mqtt interface for state
-                change requests and updates the state as requested. These state
-                change requests will create a command to the PoolCntl thread via the
-                to_pool queue.
-                It also monitors the from_pool queue and determines if the incoming
-                packets indicate a state change from the pool controller. If the
-                state has changed it publishes the change to the mqtt interfac.
-- ThreadedLogger This thread creates a single log file that can be used by both
-                worker threads. It is also used by aqualogic_mqtt for logging.
-
-Required arguments:
--m --mqtt       The address to the mqtt server to use for the interface
--s --serial     The device address to use as the serial interface to the Aqualogic controller
--l --log_file   Path for the desired log file
-
-"""
-import argparse
-import time
-import multiprocessing as mp
-import signal
-import serial
-import time #this is for testing
 import pickle
+import binascii
 import paho.mqtt.client as mqtt
+import time
 import json
 
-
-FRAME_DLE = b'\x10'
-FRAME_STX = b'\x02'
-FRAME_ETX = b'\x03'
-
-FRAME_START = FRAME_DLE + FRAME_STX
-FRAME_END   = FRAME_DLE + FRAME_ETX
-
-FRAME_TYPE_KEY_EVENT = b'\x00\x03'
-LIGHTS = b'\x00\x01'
-
-#FRAME_LIGHTS = b'\x10\x02\x01\x02\x68\x00\xfe\x01\x00\x00\x00\x00\x01\x7c\x10\x03'
-FRAME_TYPE_KEEP_ALIVE = b'\x10\x02\x01\x01\x00\x14\x10\x03'
-#WATER_ON = b'\x10\x02\x00\x02\x00\x01\x00\x00\x00\x01\x00\x00\x00\x16\x10\x03'
-WATER_ON =  b'\x10\x02\x00\x02\x00\x10\x00\x00\x00\x00\x10\x00\x00\x00\x00\x34\x10\x03\x10\x02\x01\x02\x28\x08\x00\x00\x00\x00\x00\x00\x00\x45\x10\x03'
-WATER_OFF = b'\x10\x02\x00\x02\x00\x10\x00\x00\x00\x00\x10\x00\x00\x00\x00\x34\x10\x03\x10\x02\x01\x02\x28\x00\x00\x00\x00\x00\x00\x00\x00\x3d\x10\x03'
-
 class MyLogger():
-    def __init__(self, logging_flag):
-        self.logging_flag = logging_flag
+    def __init__(self):
+        pass
     def log(self,log_text):
-        if self.logging_flag:
-            print(log_text)
+        print(log_text)
 
 class AquaLogic():
     """Hayward/Goldline AquaLogic/ProLogic pool controller."""
@@ -111,6 +58,9 @@ class AquaLogic():
             logger.log("Display update frame")
             parts = frame_content.decode('latin-1').split()
             logger.log(parts)
+            print(type(parts[0]))
+            print(parts[0])
+
             try:
                 if parts[0] == 'Pool' and parts[1] == 'Temp':
                     # Pool Temp <temp>°[C|F]
@@ -231,67 +181,14 @@ class AquaLogic():
         # else:
         #     return True
 
-
-def process_serial(serial_addr, to_pool, from_pool, logger_q, stop_event):
-    logger_q.put('Starting serial process')
-    ser = serial.Serial(
-        port = serial_addr,\
-        baudrate = 19200)
-
-    logger_q.put("Connected to: " + ser.portstr)
-
-    #Prime the prev and curr for the first time loop
-    prev = ser.read(1)
-    curr = ser.read(1)
-    while not stop_event.is_set(): #This main loop finds the start of a frame
-        if (prev == FRAME_DLE) & (curr == FRAME_STX):
-            #Start of new frame marker
-            frame = bytearray() # reset frame
-            frame += prev 
-            end_frame = False
-            while (not end_frame) & (not stop_event.is_set()): #This loop finds the end of the frame
-                if (prev == FRAME_DLE) & (curr == FRAME_ETX): #If this is the end of frame then break the loop
-                    end_frame = True
-                    frame += curr
-                    prev = curr
-                    curr = ser.read(1)
-                else: #Continue looking for end of frame
-                    frame += curr
-                    prev = curr
-                    curr = ser.read(1)
-            if frame == FRAME_TYPE_KEEP_ALIVE:
-                pass #If transmit queue has something in it then transmit it
-            else:
-                #The frame is not a keep alive so we should send this to the from_pool queue
-                from_pool.put(frame)
-        else:
-            #Keep searching for start of new frame marker
-            prev = curr
-            curr = ser.read(1)
-
-    logger_q.put('Stopping serial process')
-    ser.close()
-    logger_q.put('Serial port closed')
-
-class GracefulKiller:
-    kill_now = False
-    def __init__(self):
-        signal.signal(signal.SIGINT, self.exit_gracefully)
-        signal.signal(signal.SIGTERM, self.exit_gracefully)
-
-    def exit_gracefully(self,signum, frame):
-        self.kill_now = True
-
 if __name__ == '__main__':
-    #Debugging code below. Could turn it into a logging option
     log_name = "/home/hkeene/pool/aqualogic/playground/logs/messages_from_pool2.bin"
-    log_chk = False #set to true to log received data
-    data = list()
 
-    serial_addr = '/dev/ttyUSB0'
-
+    with open(log_name, 'rb') as fp:
+        items = pickle.load(fp)
+    
     controller = AquaLogic()
-    logger = MyLogger(log_chk)
+    logger = MyLogger()
     
     broker="192.168.1.100"
     port=1883
@@ -305,34 +202,134 @@ if __name__ == '__main__':
     logger.log("Connecting to MQTT server")
     mqtt_client.connect(broker, port, 60)
     mqtt_client.loop_start()    
-    
-    killer = GracefulKiller()
-    ctx = mp.get_context('spawn')
-    logger_q = ctx.Queue()
-    to_pool = ctx.Queue()
-    from_pool = ctx.Queue()
-    stop_event = ctx.Event()
-    p =  mp.Process(target=process_serial, args=(serial_addr,to_pool,from_pool,logger_q,stop_event,))
-    p.start()
-    while True:
-        if not logger_q.empty():
-            print(logger_q.get())
-        if not from_pool.empty():
-            frame = from_pool.get()
-            controller.process(frame, mqtt_client, logger)
 
-#            print(frame)
-            if log_chk:
-                data.append(frame)
-        if killer.kill_now:
-          break
-    stop_event.set()
-    print("Ending program")
-    p.join()
-    if log_chk:
-        with open (log_name, "wb") as fp:
-            pickle.dump(data, fp)
-    while not logger_q.empty():
-        print(logger_q.get())
+    for frame in items:
+        controller.process(frame, mqtt_client, logger)
+
+    # # Create dict for the info from pool
+    # pool_temp = {"pool_temperature": 12}
+    # spa_temp = {"spa_temperature": 23}
+    # outside_temp = {"outside_temperature": 34}
+
+    # time.sleep(1)
+    # mqtt_client.publish(controller.topics["pool_temperature_addr"], json.dumps(pool_temp, indent=4), 1)
+    # time.sleep(1)
+    # mqtt_client.publish(controller.topics["spa_temperature_addr"], json.dumps(spa_temp, indent=4), 1)
+    # time.sleep(1)
+    # mqtt_client.publish(controller.topics["outside_temperature_addr"], json.dumps(outside_temp, indent=4), 1)
+    # time.sleep(1)
     
     mqtt_client.disconnect()
+
+
+    # if frame_type == self.FRAME_TYPE_KEEP_ALIVE:
+    #     # Keep alive
+    #     # If a frame has been queued for transmit, send it.
+    #     if not self._send_queue.empty():
+    #         data = self._send_queue.get(block=False)
+    #         self._writer.write(data['frame'])
+    #         self._writer.flush()
+    #         _LOGGER.info('Sent: %s', binascii.hexlify(data['frame']))
+
+    #         try:
+    #             if data['desired_states'] is not None:
+    #                 # Set a timer to verify the state changes
+    #                 # Wait 2 seconds as it can take a while for
+    #                 # the state to change.
+    #                 Timer(2.0, self._check_state, [data]).start()
+    #         except KeyError:
+    #             pass
+
+    #     continue
+    # elif frame_type == self.FRAME_TYPE_KEY_EVENT:
+    #     _LOGGER.info('Key: %s', binascii.hexlify(frame))
+    # elif frame_type == self.FRAME_TYPE_LEDS:
+    #     _LOGGER.debug('LEDs: %s', binascii.hexlify(frame))
+    #     # First 4 bytes are the LEDs that are on;
+    #     # second 4 bytes_ are the LEDs that are flashing
+    #     states = int.from_bytes(frame[0:4], byteorder='little')
+    #     flashing_states = int.from_bytes(frame[4:8],
+    #                                      byteorder='little')
+    #     states |= flashing_states
+    #     if (states != self._states
+    #             or flashing_states != self._flashing_states):
+    #         self._states = states
+    #         self._flashing_states = flashing_states
+    #         data_changed_callback(self)
+    # elif frame_type == self.FRAME_TYPE_PUMP_SPEED_REQUEST:
+    #     value = int.from_bytes(frame[0:2], byteorder='big')
+    #     _LOGGER.debug('Pump speed request: %d%%', value)
+    #     if self._pump_speed != value:
+    #         self._pump_speed = value
+    #         data_changed_callback(self)
+    # elif frame_type == self.FRAME_TYPE_PUMP_STATUS:
+    #     # Pump status messages sent out by Hayward VSP pumps
+    #     self._multi_speed_pump = True
+    #     speed = frame[2]
+    #     # Power is in BCD
+    #     power = ((((frame[3] & 0xf0) >> 4) * 1000)
+    #              + (((frame[3] & 0x0f)) * 100)
+    #              + (((frame[4] & 0xf0) >> 4) * 10)
+    #              + (((frame[4] & 0x0f))))
+    #     _LOGGER.debug('Pump speed: %d%%, power: %d watts',
+    #                   speed, power)
+    #     if self._pump_power != power:
+    #         self._pump_power = power
+    #         data_changed_callback(self)
+    # elif frame_type == self.FRAME_TYPE_DISPLAY_UPDATE:
+    #     parts = frame.decode('latin-1').split()
+    #     _LOGGER.debug('Display update: %s', parts)
+
+    #     try:
+    #         if parts[0] == 'Pool' and parts[1] == 'Temp':
+    #             # Pool Temp <temp>°[C|F]
+    #             value = int(parts[2][:-2])
+    #             if self._pool_temp != value:
+    #                 self._pool_temp = value
+    #                 self._is_metric = parts[2][-1:] == 'C'
+    #                 data_changed_callback(self)
+    #         elif parts[0] == 'Spa' and parts[1] == 'Temp':
+    #             # Spa Temp <temp>°[C|F]
+    #             value = int(parts[2][:-2])
+    #             if self._spa_temp != value:
+    #                 self._spa_temp = value
+    #                 self._is_metric = parts[2][-1:] == 'C'
+    #                 data_changed_callback(self)
+    #         elif parts[0] == 'Air' and parts[1] == 'Temp':
+    #             # Air Temp <temp>°[C|F]
+    #             value = int(parts[2][:-2])
+    #             if self._air_temp != value:
+    #                 self._air_temp = value
+    #                 self._is_metric = parts[2][-1:] == 'C'
+    #                 data_changed_callback(self)
+    #         elif parts[0] == 'Pool' and parts[1] == 'Chlorinator':
+    #             # Pool Chlorinator <value>%
+    #             value = int(parts[2][:-1])
+    #             if self._pool_chlorinator != value:
+    #                 self._pool_chlorinator = value
+    #                 data_changed_callback(self)
+    #         elif parts[0] == 'Spa' and parts[1] == 'Chlorinator':
+    #             # Spa Chlorinator <value>%
+    #             value = int(parts[2][:-1])
+    #             if self._spa_chlorinator != value:
+    #                 self._spa_chlorinator = value
+    #                 data_changed_callback(self)
+    #         elif parts[0] == 'Salt' and parts[1] == 'Level':
+    #             # Salt Level <value> [g/L|PPM|
+    #             value = float(parts[2])
+    #             if self._salt_level != value:
+    #                 self._salt_level = value
+    #                 self._is_metric = parts[3] == 'g/L'
+    #                 data_changed_callback(self)
+    #         elif parts[0] == 'Check' and parts[1] == 'System':
+    #             # Check System <msg>
+    #             value = ' '.join(parts[2:])
+    #             if self._check_system_msg != value:
+    #                 self._check_system_msg = value
+    #                 data_changed_callback(self)
+    #     except ValueError:
+    #         pass
+    # else:
+    #     _LOGGER.info('Unknown frame: %s %s',
+    #                  binascii.hexlify(frame_type),
+    #                  binascii.hexlify(frame))
