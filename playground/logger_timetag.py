@@ -13,7 +13,7 @@ frame = bytearray()
 data = list()
 
 BYTES_TO_READ = 2000
-log_name = "/home/hkeene/pool/aqualogic/playground/logs/log_waterfalls_off.bin"
+log_name = "/home/hkeene/pool/aqualogic/playground/logs/31_pool_pump_off.bin"
 
 if __name__ == '__main__':
 
